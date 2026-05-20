@@ -1,0 +1,305 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Farm Australia - Tablero de Horas</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f5f7fb;
+        --card: #ffffff;
+        --text: #1a1f2c;
+        --muted: #596172;
+        --primary: #1d6fff;
+        --border: #d9dfeb;
+      }
+
+      * {
+        box-sizing: border-box;
+        font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      }
+
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+      }
+
+      .container {
+        max-width: 920px;
+        margin: 0 auto;
+        padding: 16px;
+      }
+
+      .card {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 16px;
+        box-shadow: 0 8px 20px rgba(20, 32, 66, 0.05);
+      }
+
+      h1 {
+        margin: 0 0 8px;
+        font-size: 1.4rem;
+      }
+
+      p {
+        margin: 0 0 16px;
+        color: var(--muted);
+      }
+
+      .info {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+        gap: 8px;
+        margin-bottom: 16px;
+      }
+
+      .pill {
+        padding: 10px;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        background: #fdfdff;
+      }
+
+      .pill strong {
+        display: block;
+        font-size: 0.9rem;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.92rem;
+      }
+
+      th,
+      td {
+        padding: 8px;
+        border-bottom: 1px solid var(--border);
+        text-align: left;
+        vertical-align: middle;
+      }
+
+      td input[type='time'],
+      td input[type='number'] {
+        width: 100%;
+        padding: 6px;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+      }
+
+      td input[type='range'] {
+        width: 100%;
+      }
+
+      .summary {
+        margin-top: 16px;
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+        gap: 10px;
+      }
+
+      .summary .card {
+        padding: 12px;
+      }
+
+      .summary-value {
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: var(--primary);
+      }
+
+      .sr-only {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        border: 0;
+      }
+
+      @media (max-width: 760px) {
+        .table-wrap {
+          overflow-x: auto;
+          -webkit-overflow-scrolling: touch;
+        }
+
+        table {
+          min-width: 760px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="container">
+      <section class="card">
+        <h1>Tablero dinámico de horas - Farm Australia (Chickens)</h1>
+        <p>
+          Ingresá tu horario de ingreso/salida por día. Se descuenta automáticamente 30 minutos de break no pago.
+          Podés ajustar horas con el deslizador o escribiendo en el campo manual.
+        </p>
+
+        <div class="info">
+          <div class="pill" aria-label="Sueldo bruto por hora"><strong>Sueldo bruto</strong><span id="grossRateLabel"></span> AUD/h</div>
+          <div class="pill" aria-label="Porcentaje de taxes"><strong>Taxes</strong><span id="taxRateLabel"></span> %</div>
+          <div class="pill" aria-label="Sueldo neto por hora"><strong>Sueldo neto</strong><span id="netRateLabel"></span> AUD/h</div>
+          <div class="pill" aria-label="Break diario no pago"><strong>Break diario no pago</strong>0.5 h</div>
+        </div>
+        <p id="hoursHelp" class="sr-only">Las horas ajustables deben estar entre 0 y 16.</p>
+
+        <div class="table-wrap">
+          <table aria-label="Tabla semanal de horas trabajadas">
+            <thead>
+              <tr>
+                <th>Día</th>
+                <th>Ingreso</th>
+                <th>Salida</th>
+                <th>Horas calculadas</th>
+                <th>Horas ajustables</th>
+                <th>Salario neto diario</th>
+              </tr>
+            </thead>
+            <tbody id="weekRows"></tbody>
+          </table>
+        </div>
+
+        <section class="summary" aria-label="Resumen semanal">
+          <article class="card">
+            <div>Total horas semana</div>
+            <div class="summary-value" id="totalHours">0.00 h</div>
+          </article>
+          <article class="card">
+            <div>Total bruto semana</div>
+            <div class="summary-value" id="totalGross">0.00 AUD</div>
+          </article>
+          <article class="card">
+            <div>Total neto semana</div>
+            <div class="summary-value" id="totalNet">0.00 AUD</div>
+          </article>
+        </section>
+      </section>
+    </main>
+
+    <script>
+      const DAYS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+      const GROSS_RATE = 30.35;
+      const TAX_RATE = 0.15;
+      const BREAK_HOURS = 0.5;
+      const MAX_HOURS = 16;
+      const NET_RATE = GROSS_RATE * (1 - TAX_RATE);
+      const weekRows = document.getElementById('weekRows');
+      const totalHoursEl = document.getElementById('totalHours');
+      const totalGrossEl = document.getElementById('totalGross');
+      const totalNetEl = document.getElementById('totalNet');
+      const grossRateLabel = document.getElementById('grossRateLabel');
+      const taxRateLabel = document.getElementById('taxRateLabel');
+      const netRateLabel = document.getElementById('netRateLabel');
+
+      grossRateLabel.textContent = GROSS_RATE.toFixed(2);
+      taxRateLabel.textContent = (TAX_RATE * 100).toFixed(0);
+      netRateLabel.textContent = NET_RATE.toFixed(2);
+
+      function toDecimalHours(timeValue) {
+        if (!timeValue) return null;
+        const [hours, minutes] = timeValue.split(':').map(Number);
+        return hours + minutes / 60;
+      }
+
+      function calculatePaidHours(start, end) {
+        const startHours = toDecimalHours(start);
+        const endHours = toDecimalHours(end);
+
+        if (startHours === null || endHours === null) return 0;
+
+        let duration = endHours - startHours;
+        if (duration < 0) duration += 24; // Turnos que cruzan medianoche.
+
+        const paid = Math.max(0, duration - BREAK_HOURS);
+        return Number(paid.toFixed(2));
+      }
+
+      function recalculateWeek() {
+        const hourInputs = document.querySelectorAll('[data-role="adjust-hours"]');
+        let totalHours = 0;
+
+        hourInputs.forEach((input) => {
+          const hours = Number(input.value) || 0;
+          totalHours += hours;
+
+          const row = input.closest('tr');
+          row.querySelector('[data-role="daily-net"]').textContent = `${(hours * NET_RATE).toFixed(2)} AUD`;
+        });
+
+        totalHoursEl.textContent = `${totalHours.toFixed(2)} h`;
+        totalGrossEl.textContent = `${(totalHours * GROSS_RATE).toFixed(2)} AUD`;
+        totalNetEl.textContent = `${(totalHours * NET_RATE).toFixed(2)} AUD`;
+      }
+
+      function syncAdjustControls(row, value) {
+        const slider = row.querySelector('[data-role="hour-slider"]');
+        const input = row.querySelector('[data-role="adjust-hours"]');
+        slider.value = value;
+        input.value = Number(value).toFixed(2);
+      }
+
+      function clampHours(value) {
+        return Math.min(MAX_HOURS, Math.max(0, Number(value) || 0));
+      }
+
+      DAYS.forEach((day) => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td>${day}</td>
+          <td><input type="time" data-role="start"></td>
+          <td><input type="time" data-role="end"></td>
+          <td data-role="calculated-hours">0.00 h</td>
+          <td>
+            <input type="range" min="0" max="${MAX_HOURS}" step="0.25" value="0" data-role="hour-slider" aria-label="Ajustar horas para ${day} con deslizador" aria-describedby="hoursHelp">
+            <input type="number" min="0" max="${MAX_HOURS}" step="0.25" value="0" data-role="adjust-hours" aria-label="Ajustar horas para ${day} manualmente" aria-describedby="hoursHelp">
+          </td>
+          <td data-role="daily-net">0.00 AUD</td>
+        `;
+
+        const startInput = row.querySelector('[data-role="start"]');
+        const endInput = row.querySelector('[data-role="end"]');
+        const calculatedHours = row.querySelector('[data-role="calculated-hours"]');
+        const slider = row.querySelector('[data-role="hour-slider"]');
+        const manualInput = row.querySelector('[data-role="adjust-hours"]');
+
+        const updateFromTimes = () => {
+          const paidHours = calculatePaidHours(startInput.value, endInput.value);
+          calculatedHours.textContent = `${paidHours.toFixed(2)} h`;
+          syncAdjustControls(row, paidHours);
+          recalculateWeek();
+        };
+
+        startInput.addEventListener('input', updateFromTimes);
+        endInput.addEventListener('input', updateFromTimes);
+
+        slider.addEventListener('input', () => {
+          manualInput.value = Number(slider.value).toFixed(2);
+          recalculateWeek();
+        });
+
+        const updateFromManual = () => {
+          const value = clampHours(manualInput.value);
+          manualInput.value = value.toFixed(2);
+          slider.value = value;
+          recalculateWeek();
+        };
+
+        manualInput.addEventListener('input', updateFromManual);
+        manualInput.addEventListener('change', updateFromManual);
+
+        weekRows.appendChild(row);
+      });
+
+      recalculateWeek();
+    </script>
+  </body>
+</html>
