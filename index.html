@@ -134,9 +134,9 @@
         </p>
 
         <div class="info">
-          <div class="pill"><strong>Sueldo bruto</strong><span id="grossRateLabel"></span> AUD/h</div>
-          <div class="pill"><strong>Taxes</strong><span id="taxRateLabel"></span>%</div>
-          <div class="pill"><strong>Sueldo neto</strong><span id="netRateLabel"></span> AUD/h</div>
+          <div class="pill" aria-label="Sueldo bruto por hora"><strong>Sueldo bruto</strong><span id="grossRateLabel" aria-live="polite"></span> AUD/h</div>
+          <div class="pill" aria-label="Porcentaje de taxes"><strong>Taxes</strong><span id="taxRateLabel" aria-live="polite"></span>%</div>
+          <div class="pill" aria-label="Sueldo neto por hora"><strong>Sueldo neto</strong><span id="netRateLabel" aria-live="polite"></span> AUD/h</div>
           <div class="pill"><strong>Break diario no pago</strong>0.5 h</div>
         </div>
 
@@ -235,6 +235,10 @@
         input.value = Number(value).toFixed(2);
       }
 
+      function clampHours(value) {
+        return Math.min(MAX_HOURS, Math.max(0, Number(value) || 0));
+      }
+
       DAYS.forEach((day) => {
         const row = document.createElement('tr');
         row.innerHTML = `
@@ -270,12 +274,15 @@
           recalculateWeek();
         });
 
-        manualInput.addEventListener('input', () => {
-          const value = Math.min(MAX_HOURS, Math.max(0, Number(manualInput.value) || 0));
+        const updateFromManual = () => {
+          const value = clampHours(manualInput.value);
           manualInput.value = value.toFixed(2);
           slider.value = value;
           recalculateWeek();
-        });
+        };
+
+        manualInput.addEventListener('input', updateFromManual);
+        manualInput.addEventListener('change', updateFromManual);
 
         weekRows.appendChild(row);
       });
