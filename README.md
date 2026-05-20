@@ -14,4 +14,4 @@ Parámetros configurados:
 
 - Sueldo bruto: `30.35 AUD/h`
 - Taxes: `15%`
-- Sueldo neto: `25.80 AUD/h`
+- Sueldo neto: calculado automáticamente como bruto - 15% taxes

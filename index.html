@@ -134,8 +134,8 @@
         </p>
 
         <div class="info">
-          <div class="pill"><strong>Sueldo bruto</strong>30.35 AUD/h</div>
-          <div class="pill"><strong>Taxes</strong>15%</div>
+          <div class="pill"><strong>Sueldo bruto</strong><span id="grossRateLabel"></span> AUD/h</div>
+          <div class="pill"><strong>Taxes</strong><span id="taxRateLabel"></span>%</div>
           <div class="pill"><strong>Sueldo neto</strong><span id="netRateLabel"></span> AUD/h</div>
           <div class="pill"><strong>Break diario no pago</strong>0.5 h</div>
         </div>
@@ -178,13 +178,18 @@
       const GROSS_RATE = 30.35;
       const TAX_RATE = 0.15;
       const BREAK_HOURS = 0.5;
+      const MAX_HOURS = 16;
       const NET_RATE = GROSS_RATE * (1 - TAX_RATE);
       const weekRows = document.getElementById('weekRows');
       const totalHoursEl = document.getElementById('totalHours');
       const totalGrossEl = document.getElementById('totalGross');
       const totalNetEl = document.getElementById('totalNet');
+      const grossRateLabel = document.getElementById('grossRateLabel');
+      const taxRateLabel = document.getElementById('taxRateLabel');
       const netRateLabel = document.getElementById('netRateLabel');
 
+      grossRateLabel.textContent = GROSS_RATE.toFixed(2);
+      taxRateLabel.textContent = (TAX_RATE * 100).toFixed(0);
       netRateLabel.textContent = NET_RATE.toFixed(2);
 
       function toDecimalHours(timeValue) {
@@ -238,8 +243,8 @@
           <td><input type="time" data-role="end"></td>
           <td data-role="calculated-hours">0.00 h</td>
           <td>
-            <input type="range" min="0" max="16" step="0.25" value="0" data-role="hour-slider" aria-label="Horas deslizables ${day}">
-            <input type="number" min="0" max="16" step="0.25" value="0" data-role="adjust-hours" aria-label="Horas completables ${day}">
+            <input type="range" min="0" max="${MAX_HOURS}" step="0.25" value="0" data-role="hour-slider" aria-label="Horas deslizables ${day}">
+            <input type="number" min="0" max="${MAX_HOURS}" step="0.25" value="0" data-role="adjust-hours" aria-label="Horas completables ${day}">
           </td>
           <td data-role="daily-net">0.00 AUD</td>
         `;
@@ -266,7 +271,7 @@
         });
 
         manualInput.addEventListener('input', () => {
-          const value = Math.min(16, Math.max(0, Number(manualInput.value) || 0));
+          const value = Math.min(MAX_HOURS, Math.max(0, Number(manualInput.value) || 0));
           manualInput.value = value.toFixed(2);
           slider.value = value;
           recalculateWeek();
